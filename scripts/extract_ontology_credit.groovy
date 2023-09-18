@@ -23,33 +23,13 @@ import org.semanticweb.owlapi.search.*
 import org.semanticweb.owlapi.manchestersyntax.renderer.*
 import org.semanticweb.owlapi.reasoner.structural.*
 
-/*def PROPS = [
-"<http://purl.org/dc/elements/1.1/contributor>",
-"<http://www.geneontology.org/formats/oboInOwl#editor>",
-"<http://www.geneontology.org/formats/oboInOwl#created_by>",
-"<http://purl.obolibrary.org/obo/cl#created_by>",
-"<http://purl.org/dc/elements/1.1/creator>",
-"<http://purl.org/pav/curatedBy>",
-"<http://purl.org/pav/createdBy>",
-"<http://purl.org/net/OCRe/statistics.owl#curator>",
-"<http://purl.obolibrary.org/obo/IAO_0000117>",
-]*/
+def PROPS = new File('data/all_orcid_properties.txt').text.split('\n') 
 
-def allOrcidProperties = [:]
+def oWriter = new BufferedWriter(new FileWriter('data/ontology_credit_annotations.tsv'))
+oWriter.write("oid\tproperty\tvalue\torcid\n")
+
 def manager = OWLManager.createOWLOntologyManager()
 def fac = manager.getOWLDataFactory()
-def notLoadable = []
-
-def processAnnotation = { anno ->
-  def property = anno.getProperty()
-  OWLAnnotationValue val = anno.getValue()
-  if(val instanceof OWLLiteral) {
-    def literal = val.getLiteral()
-    if(literal =~ /\d\d\d\d-\d\d\d\d-\d\d\d\d-\d\d\d\d/) {
-      allOrcidProperties[property.toString()] = true
-    }
-  }
-}
 def processOntology = { id, filename ->
   def file = new File(filename)
   if(!file.exists()) { println "File not found $id" ; return }
@@ -59,14 +39,27 @@ def processOntology = { id, filename ->
     ont = manager.loadOntologyFromOntologyDocument(file)
   } catch(e) {
     println "Could not load $id with OWLAPI"
-    notLoadable << id
   }
   if(!ont) { return; }
-  
-  ont.getAnnotations().each { processAnnotation(it) }
-  ont.getClassesInSignature(true).each { cl ->
-    EntitySearcher.getAnnotations(cl, ont).each { processAnnotation(it) }
+
+  ont.getAnnotations().each { anno ->
+    def property = anno.getProperty().toString()
+    if(PROPS.contains(property)) {
+      OWLAnnotationValue val = anno.getValue()
+      if(val instanceof OWLLiteral) {
+        def literal = val.getLiteral().replaceAll('\t','').replaceAll('\n','')
+        def orcid = false
+        if(literal =~ /\d\d\d\d-\d\d\d\d-\d\d\d\d-\d\d\d\d/) {
+          orcid = true  
+        }
+        oWriter.write([id, property, literal, orcid].join('\t') + '\n')
+      }
+    }
   }
+
+    /*EntitySearcher.getAnnotationAssertionAxioms(ont, ont).each { annoAxiom ->
+    println annoAxiom.getAnnotation()
+    }*/
 }
 
 def i = 0
@@ -78,7 +71,6 @@ new File('data/download_links.tsv').splitEachLine('\t') {
 i++
 }
 
+oWriter.flush()
+oWriter.close()
 println 'done'
-
-new File('data/all_orcid_properties.txt').text = allOrcidProperties.keySet().toList().join('\n')
-new File('data/not_loadable.txt').text = notLoadable.join('\n')

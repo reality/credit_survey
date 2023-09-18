@@ -14,6 +14,7 @@ def uniqueAnnotations = 0
 def uniqueCreditAnnotations = 0
 def anyCreditAnnotation = 0
 def orcidCreditAnnotation = 0
+def orcidAnyAnnotation = 0
 allClasses.each { iri, it ->
   it.annotations = it.annotations.collectEntries { aProp, literals ->
     [(aProp): literals.keySet().toList()] 
@@ -23,9 +24,10 @@ allClasses.each { iri, it ->
     uniqueCreditAnnotations += it.annotations.collect { aProp, literals -> creditProps.contains(aProp) ? literals.size() : 0 }.sum()
     if(it.annotations.find { aProp, literals -> creditProps.contains(aProp) }) { anyCreditAnnotation++ }
     if(it.annotations.find { aProp, literals -> creditProps.contains(aProp) && literals.any { it =~ /\d\d\d\d-\d\d\d\d-\d\d\d\d-\d\d\d\d/ } }) { orcidCreditAnnotation++ }
+    if(it.annotations.find { aProp, literals -> literals.any { it =~ /\d\d\d\d-\d\d\d\d-\d\d\d\d-\d\d\d\d/ } }) { orcidAnyAnnotation++ }
   }
 }
-
+println "Unique classes: ${allClasses.size()}"
 println "Unique annotations: $uniqueAnnotations"
 println "Unique credit annotations: $uniqueCreditAnnotations"
 
@@ -34,3 +36,6 @@ println "Percentage of classes with any credit annotation: $anyCreditPercentage"
 
 def orcidCreditPercentage = (orcidCreditAnnotation / allClasses.size()) * 100
 println "Percentage of classes with an ORCID-containing credit annotation: $orcidCreditPercentage"
+
+def orcidAnyPercentage = (orcidAnyAnnotation / allClasses.size()) * 100
+println "Percentage of classes with an ORCID-containing annotation: $orcidAnyPercentage"

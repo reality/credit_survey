@@ -51,8 +51,7 @@ def processOntology = { id, filename ->
     }
     allClasses[iri] << id
 
-    EntitySearcher.getAnnotationAssertionAxioms(cl, ont).each { annoAxiom ->
-      def anno = annoAxiom.getAnnotation()
+    EntitySearcher.getAnnotations(cl, ont).each { anno ->
       def property = anno.getProperty().toString()
       if(PROPS.contains(property)) {
         OWLAnnotationValue val = anno.getValue()
